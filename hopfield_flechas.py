@@ -1,6 +1,5 @@
 # Red neuronal de hopfield que reconoce flechas 7x7
 
-from random import randint
 
 # Cargamos los archivos txt y los guardamos en vector
 def cargar_patron_txt(ruta):
@@ -37,17 +36,18 @@ def dibuja_flecha(grid):
     print()
 
 
-# Aqui ciclamos la matriz de pesos para entrenar la red
+# Aqui ciclamos la matriz de pesos para entrenar la red y ponemos la diagonal T en 0
 def entrenar_hopfield(patrones_vector):
     n = len(patrones_vector[0])
-    W = [[0 for _ in range(n)] for _ in range(n)]
+    T = [[0 for _ in range(n)] for _ in range(n)]
     for p in patrones_vector:
         for i in range(n):
             for j in range(n):
-                if i != j:
-                    W[i][j] += p[i] * p[j]
-    W = [[w_ij / len(patrones_vector) for w_ij in w_i] for w_i in W]  # normalizamos
-    return W
+                T[i][j] += p[i] * p[j]
+    # Poner la diagonal en cero
+    for i in range(n):
+        T[i][i] = 0
+    return T
 
 
 # Esta funcion sirve para actualizar cada numero de la red
@@ -56,20 +56,19 @@ def signo(x):
 
 
 # Aqui la red recuerda el patron
-def recordar_patron(w, estado_inicial, max_iter=100):
+def recordar_patron(T, estado_inicial, max_iter=100):
     s = estado_inicial[:]
     n = len(s)
     iteraciones = 0
     cambio = True
-    while (
-        cambio and iteraciones < max_iter
-    ):  # mientras haya cambios y no se pase del maximo de iteraciones que es 100
+    while cambio and iteraciones < max_iter:
+        # mientras haya cambios y no se pase del maximo de iteraciones que es 100
         cambio = False
         for i in range(n):
             suma = 0
             for j in range(n):
                 if j != i:
-                    suma += w[i][j] * s[j]
+                    suma += T[i][j] * s[j]
             nuevo = signo(suma)
             if nuevo != s[i]:
                 s[i] = nuevo
@@ -78,29 +77,71 @@ def recordar_patron(w, estado_inicial, max_iter=100):
     return s, iteraciones  # regresa el estado final y el numero de iteraciones
 
 
-# Esta funcion agrega el ruido a la matriz
-def ruido(v):
-    u = v[:]
-    num_ruido = randint(1, 7)  # cantidad de elementos a modificar
-    indices = set()
-    while len(indices) < num_ruido:
-        indices.add(randint(0, len(v) - 1))
-    for idx in indices:
-        u[idx] = -u[idx]
-    return u
+# Para agregar ruido, primero clasificamos por cercania
+def cercania(a, b):
+    d = 0
+    for x, y in zip(a, b):
+        if x != y:
+            d += 1
+    return d
+
+
+def clasificar_por_cercania(v, patrones_vec, etiquetas):
+    mejor_label = None
+    mejor_dist = None
+    for label, p in zip(etiquetas, patrones_vec):
+        d = cercania(v, p)
+        if mejor_dist is None or d < mejor_dist:
+            mejor_dist = d
+            mejor_label = label
+    return mejor_label, mejor_dist
+
+
+# Despues hacemos 2 tipos de ruido para cubrir la matriz
+def cruz_central():
+    M = 7
+    N = 7
+    r = [[0 for _ in range(N)] for _ in range(M)]
+    mid = 3
+    for j in range(N):
+        r[mid][j] = 1
+    for i in range(M):
+        r[i][mid] = 1
+    return r
+
+
+def diagonal():
+    M = 7
+    N = 7
+    r = [[0 for _ in range(N)] for _ in range(M)]
+    for i in range(M):
+        r[i][i] = 1
+    return r
+
+
+def ruido(v, matriz_ruido):
+    # convertimos la matriz de ruido a vector
+    vector_ruido = []
+    for fila in matriz_ruido:
+        for x in fila:
+            vector_ruido.append(x)
+    v_ruido = v[:]
+    for i in range(len(v_ruido)):  # voltear signo si es 1
+        if vector_ruido[i] == 1:
+            v_ruido[i] = -v_ruido[i]
+    return v_ruido
 
 
 def main():
     archivos = [
-        "flechas/flecha_abajo.txt",
-        "flechas/flecha_arriba.txt",
-        "flechas/flecha_derecha.txt",
-        "flechas/flecha_izquierda.txt", # solo con 4 flechas funciona bien el reconocimiento
-        #"flechas/flecha_esquina_abderecha.txt",
-        #"flechas/flecha_esquina_abizquierda.txt",
-        #"flechas/flecha_esquina_arderecha.txt",
-        #"flechas/flecha_esquina_arizquierda.txt",
-
+        #"flechas/flecha_abajo.txt",
+        #"flechas/flecha_arriba.txt",
+        #"flechas/flecha_derecha.txt",
+        #"flechas/flecha_izquierda.txt",  # solo con 4 flechas funciona bien el reconocimiento
+        "flechas/flecha_esquina_abderecha.txt",
+        "flechas/flecha_esquina_abizquierda.txt",
+        "flechas/flecha_esquina_arderecha.txt",
+        "flechas/flecha_esquina_arizquierda.txt",
     ]
 
     patrones_vector = []
@@ -112,7 +153,7 @@ def main():
         patrones_vector.append(v)
         patrones_binarios.append(m)
 
-    W = entrenar_hopfield(patrones_vector)
+    T = entrenar_hopfield(patrones_vector)
 
     flechas = [
         "abajo",
@@ -129,11 +170,14 @@ def main():
         print("Patrón del archivo: ")
         dibuja_flecha(patrones_binarios[i])
 
-        v_ruido = ruido(patrones_vector[i])
+        # Puedes elegir el tipo de ruido que deseas aplicar, por ejemplo cruz_central()
+        matriz_ruido = diagonal()
+        # matriz_ruido = cruz_central()
+        v_ruido = ruido(patrones_vector[i], matriz_ruido)
         print("Ruido: ")
         dibuja_flecha(vector_grid(v_ruido))
 
-        recordado, iters = recordar_patron(W, v_ruido)
+        recordado, iters = recordar_patron(T, v_ruido)
         print(f"Patrón después de {iters} iteraciones: ")
         dibuja_flecha(vector_grid(recordado))
 
