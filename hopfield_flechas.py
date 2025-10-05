@@ -1,4 +1,6 @@
 # Red neuronal de hopfield que reconoce flechas 7x7
+# Usa 8 patrones de flechas pero solo reconoce bien 4 a la vez
+# Usa ruido en cruz central o diagonal
 
 
 # Cargamos los archivos txt y los guardamos en vector
@@ -89,15 +91,17 @@ def cercania(a, b):
 def clasificar_por_cercania(v, patrones_vec, etiquetas):
     mejor_label = None
     mejor_dist = None
-    for label, p in zip(etiquetas, patrones_vec):
-        d = cercania(v, p)
-        if mejor_dist is None or d < mejor_dist:
-            mejor_dist = d
-            mejor_label = label
+    for label in etiquetas:
+        for p in patrones_vec:
+            d = cercania(v, p)
+            if mejor_dist is None or d < mejor_dist:
+                mejor_dist = d
+                mejor_label = label
     return mejor_label, mejor_dist
 
 
 # Despues hacemos 2 tipos de ruido para cubrir la matriz
+# cruz central y diagonal
 def cruz_central():
     M = 7
     N = 7
@@ -134,14 +138,14 @@ def ruido(v, matriz_ruido):
 
 def main():
     archivos = [
-        #"flechas/flecha_abajo.txt",
-        #"flechas/flecha_arriba.txt",
-        #"flechas/flecha_derecha.txt",
-        #"flechas/flecha_izquierda.txt",  # solo con 4 flechas funciona bien el reconocimiento
-        "flechas/flecha_esquina_abderecha.txt",
-        "flechas/flecha_esquina_abizquierda.txt",
-        "flechas/flecha_esquina_arderecha.txt",
-        "flechas/flecha_esquina_arizquierda.txt",
+        "flechas/flecha_abajo.txt",
+        "flechas/flecha_arriba.txt",
+        "flechas/flecha_derecha.txt",
+        "flechas/flecha_izquierda.txt",  # solo con 4 flechas a la vez funciona bien el reconocimiento
+        # "flechas/flecha_esquina_abderecha.txt",
+        # "flechas/flecha_esquina_abizquierda.txt",
+        # "flechas/flecha_esquina_arderecha.txt",
+        # "flechas/flecha_esquina_arizquierda.txt",
     ]
 
     patrones_vector = []
@@ -170,7 +174,7 @@ def main():
         print("Patrón del archivo: ")
         dibuja_flecha(patrones_binarios[i])
 
-        # Puedes elegir el tipo de ruido que deseas aplicar, por ejemplo cruz_central()
+        # Puedes elegir el tipo de ruido
         matriz_ruido = diagonal()
         # matriz_ruido = cruz_central()
         v_ruido = ruido(patrones_vector[i], matriz_ruido)
@@ -180,6 +184,10 @@ def main():
         recordado, iters = recordar_patron(T, v_ruido)
         print(f"Patrón después de {iters} iteraciones: ")
         dibuja_flecha(vector_grid(recordado))
+
+        if (recordado not in patrones_vector):  # si no encuentra el patron, lo clasifica por cercania
+            etiqueta = clasificar_por_cercania(recordado, patrones_vector, flechas)
+            print(f"Clasificado como: {etiqueta}")
 
 
 main()
