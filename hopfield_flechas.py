@@ -89,15 +89,14 @@ def cercania(a, b):
 
 
 def clasificar_por_cercania(v, patrones_vec, etiquetas):
-    mejor_label = None
-    mejor_dist = None
-    for label in etiquetas:
-        for p in patrones_vec:
-            d = cercania(v, p)
-            if mejor_dist is None or d < mejor_dist:
-                mejor_dist = d
-                mejor_label = label
-    return mejor_label, mejor_dist
+    mejor_label = 0
+    mejor_dist = cercania(v, patrones_vec[0])
+    for i in range(1, len(patrones_vec)):
+        d = cercania(v, patrones_vec[i])
+        if d < mejor_dist:
+            mejor_dist = d
+            mejor_label = i
+    return etiquetas[mejor_label], mejor_dist
 
 
 # Despues hacemos 2 tipos de ruido para cubrir la matriz
@@ -142,10 +141,10 @@ def main():
         "flechas/flecha_arriba.txt",
         "flechas/flecha_derecha.txt",
         "flechas/flecha_izquierda.txt",  # solo con 4 flechas a la vez funciona bien el reconocimiento
-        # "flechas/flecha_esquina_abderecha.txt",
-        # "flechas/flecha_esquina_abizquierda.txt",
-        # "flechas/flecha_esquina_arderecha.txt",
-        # "flechas/flecha_esquina_arizquierda.txt",
+        #"flechas/flecha_esquina_abderecha.txt",
+        #"flechas/flecha_esquina_abizquierda.txt",
+        #"flechas/flecha_esquina_arderecha.txt",
+        #"flechas/flecha_esquina_arizquierda.txt",
     ]
 
     patrones_vector = []
@@ -185,9 +184,13 @@ def main():
         print(f"Patrón después de {iters} iteraciones: ")
         dibuja_flecha(vector_grid(recordado))
 
-        if (recordado not in patrones_vector):  # si no encuentra el patron, lo clasifica por cercania
-            etiqueta = clasificar_por_cercania(recordado, patrones_vector, flechas)
-            print(f"Clasificado como: {etiqueta}")
+        if (
+            recordado not in patrones_vector
+        ):  # si no encuentra el patron, lo clasifica por cercania
+            etiqueta, dist = clasificar_por_cercania(
+                recordado, patrones_vector, flechas
+            )
+            print(f"Clasificado como: {etiqueta} (distancia: {dist})")
 
 
 main()
